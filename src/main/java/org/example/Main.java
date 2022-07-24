@@ -1,9 +1,6 @@
 package org.example;
 
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.Objects;
-import java.util.TreeSet;
+import java.util.*;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
@@ -12,19 +9,24 @@ public class Main {
     private static final HashMap<String, TreeSet<Users>> database = new HashMap<>(1, 1.0f);
     public static final String USERS = "users";
 
-    public static void main(String[] args) {
+    private static final Comparator<Users> usersComparator = Comparator.comparingInt(users -> users.id);
+
+    public static void main(String[] args) throws NoSuchFieldException {
         createDatabase();
         put();
         printList(database.get("users"));
         help();
        from(USERS, where(user -> Objects.equals(user.nome, "Arthur")));
+        System.out.println(select("age", from("users")));
     }
 
     private static void createDatabase() {
-        database.put(USERS, new TreeSet<>(Comparator.comparingInt(users -> users.id)));
+
+        database.put(USERS, new TreeSet<>(usersComparator));
     }
 
     private static void put() {
+        //carga
         var list = database.get("users");
         list.add(new Users(1, "Arthur", 19));
         list.add(new Users(2, "Caio", 30));
@@ -40,7 +42,7 @@ public class Main {
         list.add(new Users(14, "Natalia", 20));
     }
 
-    private static void printList(TreeSet<Users> list) {
+    private static void printList(TreeSet<? extends Users> list) {
         System.out.println("-----------------------------------------------------------------------------");
         System.out.printf("%5s %12s %7s", "USER ID", "NAME", "AGE");
         System.out.println();
@@ -59,13 +61,29 @@ public class Main {
             printList(data);
             return data;
         } else {
-            var filterData = data.stream().filter(conditions).collect(Collectors.toCollection(() -> new TreeSet<>(Comparator.comparingInt(users -> users.id))));
+            var filterData = data.stream().filter(conditions).collect(Collectors.toCollection(() -> new TreeSet<>(usersComparator)));
             printList(filterData);
             return filterData;
         }
     }
 
-    static TreeSet<Users> from(String table) {
+    /**
+     * not 100% implemented
+     */
+    public static TreeSet<?> select(String column, TreeSet<Users> from) {
+        switch (column){
+            case "*": return database.get("users");
+            case "count": return new TreeSet<>(Collections.singleton(database.get("users").size()));
+
+            default:
+                String[] split = column.split(",");
+                var fields = new ArrayList<>(Arrays.asList(split));
+               return from.stream().map(row -> new Users(fields, row)).collect(Collectors.toCollection(() -> new TreeSet<>(usersComparator)));
+
+        }
+    }
+
+    static TreeSet<Users> from(final String table) {
         var data = database.get(table);
         printList(data);
         return database.get(table);
@@ -81,7 +99,9 @@ public class Main {
         System.out.println();
         System.out.println("-----------------------------------------------------------------------------");
 
-        System.out.println("FOR EXAMPLE: Try run 'from(\"users\",where(e -> e.nome == \"Alex\"))';\n");
+        System.out.println("FOR EXAMPLE: Try run 'from(\"users\",where(e -> e.nome == \"Alex\"))'\n");
+        System.out.println("or: 'from(users)'\n");
+        System.out.println("or: 'select(\"*\", from(\"users\")'");
     }
 
     public static class Users {
@@ -93,6 +113,20 @@ public class Main {
             this.id = id;
             this.nome = nome;
             this.age = age;
+        }
+
+        public Users(ArrayList<String> filds, Users row) {
+            for (String element: filds) {
+                if (element.equals("age")){
+                    this.age = row.age;
+                }
+                if (element.equals("nome")){
+                    this.nome = row.nome;
+                }
+                if (element.equals("id")){
+                    this.id = row.id;
+                }
+            }
         }
 
         @Override

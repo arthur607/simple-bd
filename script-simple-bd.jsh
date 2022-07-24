@@ -1,4 +1,5 @@
     public class Users {
+	//default entity ex
 
         public int id;
         public String nome;
@@ -8,6 +9,20 @@
             this.id = id;
             this.nome = nome;
             this.age = age;
+        }
+        
+            public Users(ArrayList<String> filds, Users row) {
+            for (String element: filds) {
+                if (element.equals("age")){
+                    this.age = row.age;
+                }
+                if (element.equals("nome")){
+                    this.nome = row.nome;
+                }
+                if (element.equals("id")){
+                    this.id = row.id;
+                }
+            }
         }
 
         @Override
@@ -33,30 +48,46 @@
 
     private HashMap<String, TreeSet<Users>> database = new HashMap<>();
     
+    private Comparator<Users> usersComparator = Comparator.comparingInt(users -> users.id);
+    
         public void help(){
         System.out.println("");
         System.out.format("%5s", "Helper");
         System.out.println();
         System.out.println("-----------------------------------------------------------------------------");
 
-        System.out.println("FOR EXAMPLE: Try run 'from(\"users\",where(e -> e.nome == \"Alex\"))';\n");
+        System.out.println("FOR EXAMPLE: Try run 'from(\"users\",where(e -> e.nome == \"Alex\"))'\n");
+        System.out.println("or: 'from(users)'\n");
+        System.out.println("or: 'select(\"*\", from(\"users\")'");
+    }
+        public TreeSet<?> select(String column, TreeSet<Users> from) {
+        switch (column){
+            case "*": return database.get("users");
+            case "count": return new TreeSet<>(Collections.singleton(database.get("users").size()));
+
+            default:
+                final String[] split = column.split(",");
+                final var fields = new ArrayList<>(Arrays.asList(split));
+               return from.stream().map(row -> new Users(fields, row)).collect(Collectors.toCollection(() -> new TreeSet<>(usersComparator)));
+
+        }
     }
 
 
-     TreeSet<Users> from(String table, Predicate<Users> conditions) {
-         var data = database.get(table);
+     TreeSet<Users> from(final String table, Predicate<Users> conditions) {
+        final var data = database.get(table);
         if (conditions == null) {
             printList(data);
             return data;
         } else {
-            var filterData = data.stream().filter(conditions).collect(Collectors.toCollection(() -> new TreeSet<>(Comparator.comparingInt(users -> users.id))));
+           final var filterData = data.stream().filter(conditions).collect(Collectors.toCollection(() -> new TreeSet<>(usersComparator)));
             printList(filterData);
             return filterData;
         }
     }
     
-        TreeSet<Users> from(String table) {
-        var data = database.get(table);
+        TreeSet<Users> from(final String table) {
+       final var data = database.get(table);
         printList(data);
         return database.get(table);
     }
@@ -66,11 +97,12 @@
     }
     
     private void createDatabase() {
-        database.put("users", new TreeSet<>(Comparator.comparingInt(users -> users.id)));
+        database.put("users", new TreeSet<>(usersComparator));
     }
     
     
     private void put() {
+    //carga...
         var list = database.get("users");
         list.add(new Users(1, "Arthur", 19));
         list.add(new Users(2, "Caio", 30));
