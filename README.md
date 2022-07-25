@@ -20,10 +20,3 @@ Open cmd and type 'jshell {your base-path}/simple-bd/script-simple-bd.jsh'.
 ```sh
 jshell {your base-path}/simple-bd/script-simple-bd.jsh
 ```
-
-For production environments...
-
-```sh
-npm install --production
-NODE_ENV=production node app
-```
