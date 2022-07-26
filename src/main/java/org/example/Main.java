@@ -16,8 +16,8 @@ public class Main {
         put();
         printList(database.get("users"));
         help();
-       from(USERS, where(user -> Objects.equals(user.nome, "Arthur")));
-        System.out.println(select("age", from("users")));
+        from(USERS, where(user -> Objects.equals(user.nome, "Arthur")));
+        select("age", from("users"));
     }
 
     private static void createDatabase() {
@@ -45,8 +45,7 @@ public class Main {
     private static void printList(TreeSet<? extends Users> list) {
         System.out.println("-----------------------------------------------------------------------------");
         System.out.printf("%5s %12s %7s", "USER ID", "NAME", "AGE");
-        System.out.println();
-        System.out.println("-----------------------------------------------------------------------------");
+        headers();
 
         for (Users student : list) {
             System.out.format("%5s %14s, %6s", student.id, student.nome, student.age);
@@ -61,7 +60,9 @@ public class Main {
             printList(data);
             return data;
         } else {
-            var filterData = data.stream().filter(conditions).collect(Collectors.toCollection(() -> new TreeSet<>(usersComparator)));
+
+            //Collections.binarySearch(Arrays.asList(database.get(table).toArray()), new Users(0,"Arthur",0),u)
+            var filterData = data.stream().filter(conditions).collect(Collectors.toCollection(() -> new TreeSet<>(usersComparator)));  //table scan
             printList(filterData);
             return filterData;
         }
@@ -71,16 +72,84 @@ public class Main {
      * not 100% implemented
      */
     public static TreeSet<?> select(String column, TreeSet<Users> from) {
-        switch (column){
-            case "*": return database.get("users");
-            case "count": return new TreeSet<>(Collections.singleton(database.get("users").size()));
+        switch (column) {
+            case "*":
+                return database.get("users");
+            case "count":
+                return new TreeSet<>(Set.of(database.get("users").size()));
 
             default:
                 String[] split = column.split(",");
-                var fields = new ArrayList<>(Arrays.asList(split));
-               return from.stream().map(row -> new Users(fields, row)).collect(Collectors.toCollection(() -> new TreeSet<>(usersComparator)));
+                final var fields = new ArrayList<>(Arrays.asList(split));
+                TreeSet<Users> collect = from.stream().map(row -> new Users(fields, row)).collect(Collectors.toCollection(() -> new TreeSet<>(usersComparator)));
+                final var finalData = new LinkedHashMap<String, Object>();
+                collect.forEach(e -> {
+                    if (e.nome != null) {
+                        finalData.put("NAME", e.nome);
+                    }
+                    if (e.age != 0) {
+                        finalData.put("AGE", e.age);
+                    }
+                    if (e.id != 0) {
+                        finalData.put("ID", e.id);
+                    }
+                });
+                printElementsBySelect(finalData);
+                final var finalValues = new TreeSet<Object>();
+                finalData.forEach((k, v) -> finalValues.add(v));
+                return finalValues;
 
         }
+    }
+
+    private static void printElementsBySelect(LinkedHashMap<String, Object> finalData) {
+      //  String reduce = finalData.keySet().stream().reduce((s, s2) -> s + "," + s2).get();
+        System.out.println("-----------------------------------------------------------------------------");
+        switch (finalData.size()) {
+            case 1: {
+                if (finalData.containsKey("ID")) {
+                    System.out.printf("%5s", "USER ID");
+                    headers();
+                    System.out.format("%5s", finalData.get("ID"));
+                }
+                if (finalData.containsKey("AGE")) {
+                    System.out.printf("%5s", "AGE");
+                    headers();
+                    System.out.format("%5s", finalData.get("AGE"));
+                }
+                if (finalData.containsKey("NAME")) {
+                    System.out.printf("%5s", "NAME");
+                    headers();
+                    System.out.format("%5s", finalData.get("NAME"));
+                }
+                break;
+            }
+            case 2: {
+                System.out.printf("%5s %12s", "USER ID", "NAME");
+                headers();
+                System.out.format("%5s %14s", finalData.get("id"), finalData.get("NAME"));
+                break;
+            }
+            case 3: {
+                System.out.printf("%5s %12s %7s", "USER ID", "NAME", "AGE");
+                headers();
+                System.out.format("%5s %14s %6s", finalData.get("ID"), finalData.get("NAME"), finalData.get("AGE"));
+                break;
+            }
+        }
+        System.out.println();
+        System.out.println("-----------------------------------------------------------------------------");
+
+//        for (Users student : list) {
+//            System.out.format("%5s %14s %6s", student.id, student.nome, student.age);
+//            System.out.println();
+//        }
+
+    }
+
+    private static void headers() {
+        System.out.println();
+        System.out.println("-----------------------------------------------------------------------------");
     }
 
     static TreeSet<Users> from(final String table) {
@@ -94,10 +163,9 @@ public class Main {
     }
 
     public static void help() {
-        System.out.println("");
-        System.out.format("%5s", "Helper");
         System.out.println();
-        System.out.println("-----------------------------------------------------------------------------");
+        System.out.format("%5s", "Helper");
+        headers();
 
         System.out.println("FOR EXAMPLE: Try run 'from(\"users\",where(e -> e.nome == \"Alex\"))'\n");
         System.out.println("or: 'from(users)'\n");
@@ -116,14 +184,14 @@ public class Main {
         }
 
         public Users(ArrayList<String> filds, Users row) {
-            for (String element: filds) {
-                if (element.equals("age")){
+            for (String element : filds) {
+                if (element.equals("age")) {
                     this.age = row.age;
                 }
-                if (element.equals("nome")){
+                if (element.equals("nome")) {
                     this.nome = row.nome;
                 }
-                if (element.equals("id")){
+                if (element.equals("id")) {
                     this.id = row.id;
                 }
             }
@@ -146,7 +214,7 @@ public class Main {
 
         @Override
         public String toString() {
-            return "\n Columns: { id : "+id+ " | name : "+nome+ " | age : "+age+" }\n";
+            return "\n Columns: { id : " + id + " | name : " + nome + " | age : " + age + " }\n";
         }
     }
 }
